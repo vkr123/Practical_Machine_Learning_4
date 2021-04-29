@@ -1,0 +1,91 @@
+---
+title: "Assignment_ML"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Downloading and Reading the Data
+
+```{r}
+library(caret)
+library(randomForest)
+train = read.csv(url("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"))
+test = read.csv(url("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"))
+```
+
+## Data Prepocessing
+
+```{r}
+# Selecting data that contains less than 85% NA values and 90% "" values
+ind=c()
+for(i in 1:dim(train)[2]){
+  if(sum(is.na(train[,i]))>(0.85*dim(train)[2]) || sum(train[,i]=="")>(0.9*dim(train)[2])){
+    ind=append(i,ind)
+  }
+}
+
+# Removing columns containing zero variance and removing the first 7 columns as it contains irrelevant information
+final = train[,-ind]
+final = final[,-nearZeroVar(final)]
+final = final[,-(1:6)]
+test=test[,-ind]
+test = test[,-nearZeroVar(test)]
+test = test[,-(1:6)]
+```
+
+## Partitioning of Data
+
+The data is divided into a training set and cross-validation set. The split percentage is 80% and 20% respectively.
+```{r}
+
+set.seed(12312)
+inbuild = createDataPartition(y=final$classe,p=0.8,list = FALSE)
+validation=final[-inbuild,]
+training = final[inbuild,]
+training$classe = as.factor(training$classe)
+validation$classe = as.factor(validation$classe)
+```
+
+## Running a Random Forest Model
+
+The coefficients are determined using the random forest model
+```{r}
+modnew = randomForest(classe ~ ., data = training, importance = TRUE, ntrees = 8)
+
+```
+
+## Prediction of Classes using the Cross Validation set
+
+```{r}
+cross_par = predict(modnew,validation)
+confusionMatrix(validation$classe,cross_par) 
+
+```
+
+The accuracy of the model on the cross-validation set is 0.998 and as a result the out-of-sample error is 0.002.
+
+## Identifying the Classes of the Test set 
+
+Here the parameters obtained from the training set using the random forest model is used
+```{r}
+test_par = predict(modnew,test)
+test_par
+```
+
+
+### Conclusion:
+
+1) Here Random forest model is used because it gives a high accuracy at classification.In addition, it is less affected by the outliers present in the data.
+
+2) The accuracy of the model on the cross-validation is 0.998 and the out-of-sample error is 0.002 which is approximately 0. This shows that the random forest model for this dataset is very efficient and accurate.
+
+## Appendix:
+
+Visualizing the first 2 parameters - num_window and roll_belt for each class - A,B,C,D,E
+```{r}
+qplot(num_window,classe,col = classe,data = train,main = "Class vs Num_Window")
+qplot(roll_belt,classe,col = classe,data = train,main = "Class vs Roll_Belt")
+```
